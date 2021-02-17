@@ -16,11 +16,10 @@ from script.face_detector import FaceDetector
 from script.videotracker import CentroidTracker
 from script.multitask_utils import (bottom_left, bottom_right, custom_objects,
                                     get_age, get_emotion, get_ethnicity,
-                                    get_gender, get_versioned_metrics,
+                                    get_gender, get_versioned_metrics, bottom_center,
                                     top_left, write_str, get_gender_cat, coords)
 
 MODEL_PATH = "models/_netresnet50_versionverC_pretrainingimagenet_datasetVGGFace2-RAF_preprocessingvggface2_augmentationdefault_batch64_lr0.001_0.5_120_sel_gpu2_training-epochs400_20210102_154443/checkpoint.600.hdf5"
-STRCOLORS = [(122,64,236),(243,150,33)]
 
 class MultiTaskNetwork:
 
@@ -136,15 +135,18 @@ class MultiMovingAverage:
         return self.faces[identifier].average(gender, age, ethnicity, emotion)
 
 
+STRCOLORS = [(122,64,236),(243,150,33)]
 def select_strcolor(gender):
     return STRCOLORS[get_gender_cat(gender)]
 
 
 debug_movingaverage = True
-CONFIDENCE_DETECTOR = 0.65
-GMA, AMA, EtMA, EmMA = 10, 35, 15, 10
+CONFIDENCE_DETECTOR = 0.5#0.65
+GMA, AMA, EtMA, EmMA = 10, 200, 20, 100 #10, 120, 20, 40 
 CENTROID_TOLERANCE = 3
-color = (3, 255, 118) #(9, 87, 39)
+bounding_color = (3, 255, 118)
+label_color = (255, 255, 255) #(3, 255, 118) #(9, 87, 39)
+text_color = (0, 0, 0)
 
 def main(source, destination=None, movingaverage=False, alignment=False, framedelay=None):
     print("-------------- PARAMETERS --------------")
@@ -156,6 +158,7 @@ def main(source, destination=None, movingaverage=False, alignment=False, framede
     print("----------------------------------------")
     cam = cv.VideoCapture(source)
     W, H = int(cam.get(3)), int(cam.get(4))
+    fontsize = int(H//20.5) #35
     if destination is not None:
         out = cv.VideoWriter(destination, cv.VideoWriter_fourcc(*'MP4V'), 20.0, (W,H))
     multitask = MultiTaskNetwork()
@@ -187,8 +190,9 @@ def main(source, destination=None, movingaverage=False, alignment=False, framede
                         G, A, E, R = multitask.get_prediction(face)
                         if movingaverage:
                             G, A, E, R = averager.average(faceID, G, A, E, R)
-                        cv.rectangle(annImage, top_left(f), bottom_right(f), color, 2)
-                        annImage = write_str(annImage, "%s, %d\n%s\n%s" % (G, A, E, R), bottom_left(f), color, select_strcolor(G))
+                        cv.rectangle(annImage, top_left(f), bottom_right(f), bounding_color, 2)
+                        label_apply = bottom_center(f) #bottom_left(f) #left alignment
+                        annImage = write_str(annImage, "%s, %d\n%s\n%s" % (G, A, E, R), label_apply, label_color, (select_strcolor(G), text_color), fontsize)
 
                         # text = "ID {}".format(faceID)
                         # cv.putText(annImage, text, (centroid[0] - 10, centroid[1] - 10),
@@ -204,8 +208,9 @@ def main(source, destination=None, movingaverage=False, alignment=False, framede
                         G, A, E, R = multitask.get_prediction(face)
                         if debug_movingaverage:
                             G, A, E, R = averager.average(0, G, A, E, R)
-                        cv.rectangle(annImage, top_left(f), bottom_right(f), color, 2)
-                        annImage = write_str(annImage, "%s, %d\n%s\n%s" % (G, A, E, R), bottom_left(f), color, select_strcolor(G))
+                        cv.rectangle(annImage, top_left(f), bottom_right(f), bounding_color, 2)
+                        label_apply = bottom_center(f) #bottom_left(f)
+                        annImage = write_str(annImage, "%s, %d\n%s\n%s" % (G, A, E, R), label_apply, label_color, (select_strcolor(G), text_color), fontsize)
 
             if destination is None:
                 cv.imshow('Multitask CNNs for efficient face analysis in the wild',annImage)

@@ -8,8 +8,9 @@ MASK_VALUE = -1
 # GENDER = ['Female', 'Male']
 # ETHNICITY = ['African American','East Asian','Caucasian Latin','Asian Indian']
 GENDER = ['♀F', '♂M']
-GENDER_SYM = ["♀", "♂"]
-ETHNICITY = ['Afro-American','Asian','Caucasian','Asian']
+# GENDER_SYM = ["♀", "♂"]
+# ETHNICITY = ['Afro-American','Asian','Caucasian','Asian']
+ETHNICITY = ['Afro-Am','Asian','Caucasian','Asian']
 EMOTIONS = ['Surprised','Afraid','Disgusted','Happy','Sad','Angry','Neutral']
 
 def Hswish(x):
@@ -141,21 +142,21 @@ def get_emotion(values):
     values = values.tolist()
     return EMOTIONS[np.argmax(values)]
 
-def write_str(annImage, text, p, color=(0, 255, 0), strcolor=(255, 255, 255)):
-    FONT = cv.FONT_HERSHEY_SIMPLEX
-    SCALE = 0.5
-    THICKNESS = 2
-    siz = 0,0
-    for i, line in enumerate(text.split('\n')):
-        tmp_siz = cv.getTextSize(line, FONT, SCALE, THICKNESS)[0]
-        siz = cv.getTextSize(line, FONT, SCALE, THICKNESS)[0] if siz[0] < tmp_siz[0] else siz
-    # p1 = (p[0]-1, p[1]-siz[1]-10)
-    p1 = (p[0]-1, p[1])
-    if p1[1] < -5:
-        p1 = (p1[0], p[1])
-    p2 = (p1[0] + 10 + siz[0], p1[1]+10+siz[1])
-    p_text = (p1[0]+5, p2[1]-5)
-    y_offset = siz[1]+5
+def write_str(annImage, text, p, color, strcolor, fontsize):
+    # FONT = cv.FONT_HERSHEY_SIMPLEX
+    # SCALE = 0.5
+    # THICKNESS = 2
+    # siz = 0,0
+    # for i, line in enumerate(text.split('\n')):
+    #     tmp_siz = cv.getTextSize(line, FONT, SCALE, THICKNESS)[0]
+    #     siz = cv.getTextSize(line, FONT, SCALE, THICKNESS)[0] if siz[0] < tmp_siz[0] else siz
+    # # p1 = (p[0]-1, p[1]-siz[1]-10)
+    # p1 = (p[0]-1, p[1])
+    # if p1[1] < -5:
+    #     p1 = (p1[0], p[1])
+    # p2 = (p1[0] + 10 + siz[0], p1[1]+10+siz[1])
+    # p_text = (p1[0]+5, p2[1]-5)
+    # y_offset = siz[1]+5
     # cv.rectangle(annImage, p1, (p2[0], p1[1]+3*25), color, cv.FILLED)
     # cv.rectangle(annImage, p1, p2, color, cv.FILLED)
     # cv.putText(annImage, text, p_text, FONT, SCALE, (255, 255, 255), THICKNESS)
@@ -165,17 +166,48 @@ def write_str(annImage, text, p, color=(0, 255, 0), strcolor=(255, 255, 255)):
     #     cv.putText(annImage, line, p_text_flow, FONT, SCALE, strcolor, THICKNESS)
 
     
+    p1 = (p[0]-1, p[1]+1)
     from PIL import ImageFont, ImageDraw, Image
     annImage_array = Image.fromarray(annImage)
     draw = ImageDraw.Draw(annImage_array)
     fontpath = "script/apple-symbols-1.ttf"  
-    font = ImageFont.truetype(fontpath, 25)
-    size = (0,0)
-    for i, line in enumerate(text.split('\n')):
-        linesize = font.getsize(line)
-        size = linesize if linesize[0] > size[0] else size
-    draw.rectangle([p1, (p1[0]+size[0]+10, p1[1]+(i+2)*size[1]+5)], fill=color)
-    draw.text((p1[0]+5, p1[1]+5), text, font=font, fill=strcolor)
+    font = ImageFont.truetype(fontpath, fontsize)
+    gender_color = strcolor[0]
+    text_color = strcolor[1]
+
+    # right alignment
+    # size = (0,0)
+    # splitted_text = text.split('\n')
+    # for i, line in enumerate(splitted_text):
+    #     linesize = font.getsize(line)
+    #     size = linesize if linesize[0] > size[0] else size
+    # draw.rectangle([p1, (p1[0]+size[0]+10, p1[1]+(i+1)*size[1]+15)], fill=color)
+    # draw.text((p1[0]+5, p1[1]+5), splitted_text[0][0], font=font, fill=strcolor)
+    # woffset, hoffset = font.getsize(text[0])
+    # draw.text((p1[0]+5+woffset, p1[1]+5), splitted_text[0][1:], font=font, fill=(0,0,0))
+    # draw.text((p1[0]+5, p1[1]+5+hoffset), "\n".join(splitted_text[1:]), font=font, fill=(0,0,0))
+
+    # center alignment
+    drawtext_buffer = []
+    splitted_text = text.split('\n')
+    maxlinewidth, linesheight = font.getsize(splitted_text[0])
+    # draw.text((p1[0] - maxlinesize[0]//2 +5, p1[1] + 5), splitted_text[0][0], strcolor, font)
+    drawtext_buffer.append(((p1[0] - maxlinewidth//2 +5, p1[1] + 5), splitted_text[0][0], gender_color, font))
+    woffset, hoffset = font.getsize(splitted_text[0][0])
+    # draw.text((p1[0] - maxlinesize[0]//2 + 5 + woffset, p1[1] + 5), splitted_text[0][1:], font=font, fill=(0,0,0))  
+    drawtext_buffer.append(((p1[0] - maxlinewidth//2 + 5 + woffset, p1[1] + 5), splitted_text[0][1:], text_color, font))
+    for i, line in enumerate(splitted_text[1:]):
+        wline, hline = font.getsize(line)
+        linesheight += hline
+        maxlinewidth = wline if wline > maxlinewidth else maxlinewidth
+        # draw.text((p1[0]- wline//2 +5, p1[1] + 5 + hoffset), line, font=font, fill=(0,0,0))
+        drawtext_buffer.append(((p1[0] - wline//2 + 5, p1[1] + 5 + hoffset), line, text_color, font))
+        hoffset += hline
+    wrectoffset = maxlinewidth//2
+    draw.rectangle([(p1[0]-wrectoffset, p1[1]), (p1[0] + wrectoffset + 10, p1[1] + linesheight + 5)], fill=color)
+    for params in drawtext_buffer:
+        draw.text(*params)
+
     return np.array(annImage_array)
 
 def top_right(f):
@@ -189,6 +221,9 @@ def bottom_right(f):
 
 def bottom_left(f):
     return (f['roi'][0], f['roi'][1]+f['roi'][3])
+
+def bottom_center(f):
+    return (f['roi'][0]+ f['roi'][2]//2, f['roi'][1]+f['roi'][3])
 
 def coords(f):
     startX, startY = top_left(f)
