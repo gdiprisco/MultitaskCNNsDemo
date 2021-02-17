@@ -1,6 +1,7 @@
-from cv2 import cv2
+import os
+
 import numpy as np
-import os 
+from cv2 import cv2
 from imutils.face_utils import FaceAligner
 
 PATH = os.path.join(os.path.dirname(os.path.realpath(__file__)), "..", "models")

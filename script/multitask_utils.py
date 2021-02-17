@@ -5,8 +5,10 @@ import numpy as np
 from cv2 import cv2 as cv
 
 MASK_VALUE = -1
-GENDER = ['Female', 'Male']
+# GENDER = ['Female', 'Male']
 # ETHNICITY = ['African American','East Asian','Caucasian Latin','Asian Indian']
+GENDER = ['♀F', '♂M']
+GENDER_SYM = ["♀", "♂"]
 ETHNICITY = ['Afro-American','Asian','Caucasian','Asian']
 EMOTIONS = ['Surprised','Afraid','Disgusted','Happy','Sad','Angry','Neutral']
 
@@ -125,6 +127,9 @@ def get_gender(values):
     values = values.tolist()
     return GENDER[np.argmax(values)]
 
+def get_gender_cat(genderstr):
+    return GENDER.index(genderstr)
+
 def get_age(value):
     return int(value)
 
@@ -136,7 +141,7 @@ def get_emotion(values):
     values = values.tolist()
     return EMOTIONS[np.argmax(values)]
 
-def write_str(annImage, text, p, color=(0, 255, 0)):
+def write_str(annImage, text, p, color=(0, 255, 0), strcolor=(255, 255, 255)):
     FONT = cv.FONT_HERSHEY_SIMPLEX
     SCALE = 0.5
     THICKNESS = 2
@@ -151,12 +156,30 @@ def write_str(annImage, text, p, color=(0, 255, 0)):
     p2 = (p1[0] + 10 + siz[0], p1[1]+10+siz[1])
     p_text = (p1[0]+5, p2[1]-5)
     y_offset = siz[1]+5
-    cv.rectangle(annImage, p1, (p2[0], p1[1]+10+4*y_offset), color, cv.FILLED)
+    # cv.rectangle(annImage, p1, (p2[0], p1[1]+3*25), color, cv.FILLED)
     # cv.rectangle(annImage, p1, p2, color, cv.FILLED)
     # cv.putText(annImage, text, p_text, FONT, SCALE, (255, 255, 255), THICKNESS)
+
+    # for i, line in enumerate(text.split('\n')):
+    #     p_text_flow = (p_text[0], p_text[1] + i*y_offset)
+    #     cv.putText(annImage, line, p_text_flow, FONT, SCALE, strcolor, THICKNESS)
+
+    
+    from PIL import ImageFont, ImageDraw, Image
+    annImage_array = Image.fromarray(annImage)
+    draw = ImageDraw.Draw(annImage_array)
+    fontpath = "script/apple-symbols-1.ttf"  
+    font = ImageFont.truetype(fontpath, 25)
+    size = (0,0)
     for i, line in enumerate(text.split('\n')):
-        p_text_flow = (p_text[0], p_text[1] + i*y_offset)
-        cv.putText(annImage, line, p_text_flow, FONT, SCALE, (255, 255, 255), THICKNESS)
+        linesize = font.getsize(line)
+        size = linesize if linesize[0] > size[0] else size
+    draw.rectangle([p1, (p1[0]+size[0]+10, p1[1]+(i+2)*size[1]+5)], fill=color)
+    draw.text((p1[0]+5, p1[1]+5), text, font=font, fill=strcolor)
+    return np.array(annImage_array)
+
+def top_right(f):
+    return (f['roi'][0]+f['roi'][2], f['roi'][1])
 
 def top_left(f):
     return (f['roi'][0], f['roi'][1])
@@ -166,3 +189,8 @@ def bottom_right(f):
 
 def bottom_left(f):
     return (f['roi'][0], f['roi'][1]+f['roi'][3])
+
+def coords(f):
+    startX, startY = top_left(f)
+    endX, endY = bottom_right(f)
+    return startX, startY, endX, endY
