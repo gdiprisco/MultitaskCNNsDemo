@@ -142,7 +142,7 @@ def select_strcolor(gender):
 
 debug_movingaverage = True
 CONFIDENCE_DETECTOR = 0.5#0.65
-GMA, AMA, EtMA, EmMA = 10, 200, 20, 100 #10, 120, 20, 40 
+GMA, AMA, EtMA, EmMA = 10, 50, 10, 10#10, 200, 20, 100 #10, 120, 20, 40 
 CENTROID_TOLERANCE = 3
 bounding_color = (3, 255, 118)
 label_color = (255, 255, 255) #(3, 255, 118) #(9, 87, 39)
@@ -171,58 +171,56 @@ def main(source, destination=None, movingaverage=False, alignment=False, framede
         averager = MultiMovingAverage(GMA, AMA, EtMA, EmMA)
     frame = 0
     while True:
-        try:
-            _, annImage = cam.read()
-            faces = facedet.detect(annImage)
-            rects = []
+        _, annImage = cam.read()
+        faces = facedet.detect(annImage)
+        rects = []
 
-            if framedelay is None or frame >= framedelay:
-                if movingaverage:
-                    for f in faces:
-                        rects.append(coords(f))
-                    objects, items = tracker.update(rects, faces)
-                    for ((faceID, centroid), (_, f)) in zip(objects.items(), items.items()):
-                        if alignment:
-                            face_coords = (0,0,f['img'].shape[0],f['img'].shape[1])
-                            face = (facealign.align(f['img'], face_coords)) 
-                        else:
-                            face = f['img']
-                        G, A, E, R = multitask.get_prediction(face)
-                        if movingaverage:
-                            G, A, E, R = averager.average(faceID, G, A, E, R)
-                        cv.rectangle(annImage, top_left(f), bottom_right(f), bounding_color, 2)
-                        label_apply = bottom_center(f) #bottom_left(f) #left alignment
-                        annImage = write_str(annImage, "%s, %d\n%s\n%s" % (G, A, E, R), label_apply, label_color, (select_strcolor(G), text_color), fontsize)
+        if framedelay is None or frame >= framedelay:
+            frame = 0
+            if movingaverage:
+                for f in faces:
+                    rects.append(coords(f))
+                objects, items = tracker.update(rects, faces)
+                for ((faceID, centroid), (_, f)) in zip(objects.items(), items.items()):
+                    if alignment:
+                        face_coords = (0,0,f['img'].shape[0],f['img'].shape[1])
+                        face = (facealign.align(f['img'], face_coords)) 
+                    else:
+                        face = f['img']
+                    G, A, E, R = multitask.get_prediction(face)
+                    if movingaverage:
+                        G, A, E, R = averager.average(faceID, G, A, E, R)
+                    cv.rectangle(annImage, top_left(f), bottom_right(f), bounding_color, 2)
+                    label_apply = bottom_center(f) #bottom_left(f) #left alignment
+                    annImage = write_str(annImage, "%s, %d\n%s\n%s" % (G, A, E, R), label_apply, label_color, (select_strcolor(G), text_color), fontsize)
 
-                        # text = "ID {}".format(faceID)
-                        # cv.putText(annImage, text, (centroid[0] - 10, centroid[1] - 10),
-                        #     cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
-                        # cv.circle(annImage, (centroid[0], centroid[1]), 4, (0, 255, 0), -1)
-                else:
-                    for f in faces:
-                        if alignment:
-                            face_coords = (0,0,f['img'].shape[0],f['img'].shape[1])
-                            face = (facealign.align(f['img'], face_coords)) 
-                        else:
-                            face = f['img']
-                        G, A, E, R = multitask.get_prediction(face)
-                        if debug_movingaverage:
-                            G, A, E, R = averager.average(0, G, A, E, R)
-                        cv.rectangle(annImage, top_left(f), bottom_right(f), bounding_color, 2)
-                        label_apply = bottom_center(f) #bottom_left(f)
-                        annImage = write_str(annImage, "%s, %d\n%s\n%s" % (G, A, E, R), label_apply, label_color, (select_strcolor(G), text_color), fontsize)
-
-            if destination is None:
-                cv.imshow('Multitask CNNs for efficient face analysis in the wild',annImage)
+                    # text = "ID {}".format(faceID)
+                    # cv.putText(annImage, text, (centroid[0] - 10, centroid[1] - 10),
+                    #     cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+                    # cv.circle(annImage, (centroid[0], centroid[1]), 4, (0, 255, 0), -1)
             else:
-                out.write(annImage)
-            if cv.waitKey(1) == ord('q'):
-                cv.destroyAllWindows()
-                exit()
-        # except Exception as e:
-        #     print("Exception:", e)
-        finally:
+                for f in faces:
+                    if alignment:
+                        face_coords = (0,0,f['img'].shape[0],f['img'].shape[1])
+                        face = (facealign.align(f['img'], face_coords)) 
+                    else:
+                        face = f['img']
+                    G, A, E, R = multitask.get_prediction(face)
+                    if debug_movingaverage:
+                        G, A, E, R = averager.average(0, G, A, E, R)
+                    cv.rectangle(annImage, top_left(f), bottom_right(f), bounding_color, 2)
+                    label_apply = bottom_center(f) #bottom_left(f)
+                    annImage = write_str(annImage, "%s, %d\n%s\n%s" % (G, A, E, R), label_apply, label_color, (select_strcolor(G), text_color), fontsize)
+        if framedelay is not None:
             frame += 1
+        if destination is None:
+            cv.imshow('Multitask CNNs for efficient face analysis in the wild',annImage)
+        else:
+            out.write(annImage)
+        if cv.waitKey(1) == ord('q'):
+            cv.destroyAllWindows()
+            exit()
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Multitask CNNs - Di Prisco Giovanni')
