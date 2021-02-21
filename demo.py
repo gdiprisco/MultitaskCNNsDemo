@@ -160,6 +160,7 @@ def main(source, destination=None, movingaverage=False, alignment=False, framede
     W, H = int(cam.get(3)), int(cam.get(4))
     fontsize = int(H//20.5) #35
     if destination is not None:
+        # TODO add support conversion param or same of source
         out = cv.VideoWriter(destination, cv.VideoWriter_fourcc(*'MP4V'), 20.0, (W,H))
     multitask = MultiTaskNetwork()
     facedet = FaceDetector(conf_thresh=CONFIDENCE_DETECTOR)
